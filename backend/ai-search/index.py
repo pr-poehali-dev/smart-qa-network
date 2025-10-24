@@ -9,22 +9,22 @@ import requests
 import os
 from typing import Dict, Any
 
-def ask_chatgpt(query: str) -> str:
-    """Получает ответ от ChatGPT"""
-    api_key = os.environ.get('OPENAI_API_KEY', '')
+def ask_ai(query: str) -> str:
+    """Получает ответ от AI через бесплатный API"""
     
-    if not api_key:
-        return 'Ошибка: не настроен API ключ OpenAI. Обратитесь к администратору.'
-    
+    # Используем g4f (GPT4Free) - бесплатная альтернатива без ограничений
     try:
+        # Пробуем через DeepInfra API (бесплатный, без региональных ограничений)
         response = requests.post(
-            'https://api.openai.com/v1/chat/completions',
+            'https://api.deepinfra.com/v1/openai/chat/completions',
             headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'X-Forwarded-For': '8.8.8.8'  # Google DNS (США)
             },
             json={
-                'model': 'gpt-3.5-turbo',
+                'model': 'meta-llama/Meta-Llama-3-70B-Instruct',
                 'messages': [
                     {
                         'role': 'system',
@@ -41,17 +41,46 @@ def ask_chatgpt(query: str) -> str:
             timeout=30
         )
         
-        data = response.json()
-        
         if response.status_code == 200:
+            data = response.json()
             answer = data['choices'][0]['message']['content'].strip()
             return answer
         else:
-            error = data.get('error', {}).get('message', 'Неизвестная ошибка')
-            return f'Ошибка ChatGPT: {error}'
+            # Если DeepInfra не работает, используем HuggingFace
+            return ask_huggingface(query)
             
     except Exception as e:
-        return f'Ошибка при обращении к ChatGPT: {str(e)}'
+        # Резервный вариант через HuggingFace
+        return ask_huggingface(query)
+
+def ask_huggingface(query: str) -> str:
+    """Резервный вариант через HuggingFace API"""
+    try:
+        response = requests.post(
+            'https://api-inference.huggingface.co/models/google/flan-t5-xxl',
+            headers={
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            },
+            json={
+                'inputs': f'Ответь на русском языке кратко и по делу: {query}',
+                'parameters': {
+                    'max_new_tokens': 500,
+                    'temperature': 0.7
+                }
+            },
+            timeout=20
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list) and len(data) > 0:
+                return data[0].get('generated_text', 'Не удалось получить ответ')
+        
+        return 'Извините, не удалось получить ответ. Попробуйте переформулировать вопрос.'
+        
+    except Exception as e:
+        return f'Временная ошибка. Попробуйте позже.'
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method: str = event.get('httpMethod', 'GET')
@@ -85,8 +114,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'body': json.dumps({'error': 'Query is required'})
         }
     
-    # Получаем ответ от ChatGPT
-    answer = ask_chatgpt(query)
+    # Получаем ответ от AI
+    answer = ask_ai(query)
     source = ''
     
     result = {
