@@ -48,49 +48,98 @@ def search_web(query: str) -> str:
 def ask_ai(query: str) -> str:
     """Получает ответ от AI с несколькими резервными вариантами"""
     
-    # Вариант 1: Бесплатные AI API
+    system_prompt = 'Ты умный AI-ассистент. ВСЕГДА отвечай КОНКРЕТНО на русском языке. Если перевод - переводи без лишних слов. Если вопрос - давай чёткий ответ. Если доклад - пиши полный текст на 3-5 абзацев. Никаких "я не знаю" или "уточните" - всегда давай полезный ответ!'
+    
+    # Вариант 1: Множество бесплатных AI API (пробуем все!)
     ai_apis = [
+        # HuggingChat API
         {
-            'url': 'https://api.pawan.krd/v1/chat/completions',
+            'url': 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
             'headers': {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer pk-'
+                'Content-Type': 'application/json'
             },
             'json': {
-                'model': 'gpt-3.5-turbo',
+                'inputs': f'{system_prompt}\n\nВопрос: {query}\n\nОтвет:',
+                'parameters': {
+                    'max_new_tokens': 500,
+                    'temperature': 0.7,
+                    'return_full_text': False
+                }
+            },
+            'extract': lambda x: x[0]['generated_text'] if isinstance(x, list) and len(x) > 0 else None
+        },
+        # Groq API (очень быстрый!)
+        {
+            'url': 'https://api.groq.com/openai/v1/chat/completions',
+            'headers': {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer gsk_demo_key_12345'
+            },
+            'json': {
+                'model': 'llama3-8b-8192',
                 'messages': [
-                    {'role': 'system', 'content': 'Ты полезный AI-ассистент. Отвечай всегда конкретно на русском. Если просят перевод - переводи. Если вопрос - отвечай. Если доклад - пиши полный текст.'},
+                    {'role': 'system', 'content': system_prompt},
                     {'role': 'user', 'content': query}
                 ],
-                'max_tokens': 1000
-            }
+                'temperature': 0.7,
+                'max_tokens': 800
+            },
+            'extract': lambda x: x['choices'][0]['message']['content'] if 'choices' in x else None
+        },
+        # Ollama Cloud
+        {
+            'url': 'https://ollama.ai/api/generate',
+            'headers': {
+                'Content-Type': 'application/json'
+            },
+            'json': {
+                'model': 'llama2',
+                'prompt': f'{system_prompt}\n\n{query}',
+                'stream': False
+            },
+            'extract': lambda x: x.get('response')
+        },
+        # Together AI
+        {
+            'url': 'https://api.together.xyz/inference',
+            'headers': {
+                'Content-Type': 'application/json'
+            },
+            'json': {
+                'model': 'togethercomputer/llama-2-7b-chat',
+                'prompt': f'{system_prompt}\n\nВопрос: {query}\n\nОтвет:',
+                'max_tokens': 500,
+                'temperature': 0.7
+            },
+            'extract': lambda x: x['output']['choices'][0]['text'] if 'output' in x else None
         }
     ]
     
-    for api in ai_apis:
+    # Пробуем все API по очереди
+    for api_config in ai_apis:
         try:
             response = requests.post(
-                api['url'],
-                headers=api['headers'],
-                json=api['json'],
-                timeout=15
+                api_config['url'],
+                headers=api_config['headers'],
+                json=api_config['json'],
+                timeout=20
             )
             
             if response.status_code == 200:
                 data = response.json()
-                if 'choices' in data and len(data['choices']) > 0:
-                    answer = data['choices'][0]['message']['content'].strip()
-                    if answer:
-                        return answer
+                answer = api_config['extract'](data)
+                
+                if answer and len(answer.strip()) > 10:
+                    return answer.strip()
         except:
             continue
     
-    # Вариант 2: Поиск в интернете
+    # Вариант 2: Поиск в интернете через DuckDuckGo
     web_result = search_web(query)
-    if web_result:
-        return f"Нашёл в интернете:\n\n{web_result}"
+    if web_result and len(web_result) > 50:
+        return f"📚 Информация из интернета:\n\n{web_result}"
     
-    # Вариант 3: Простой генератор на основе правил
+    # Вариант 3: Умный генератор на основе правил (всегда работает!)
     return generate_simple_answer(query)
 
 def translate_text(text: str) -> str:
