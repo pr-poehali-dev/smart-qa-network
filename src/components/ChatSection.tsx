@@ -26,20 +26,18 @@ interface ChatSectionProps {
   onUpgradeClick: () => void;
 }
 
-const ENHANCE_URL = 'https://functions.poehali.dev/8699a9ae-e3fd-4ff0-a3df-c4c4cbd97c50';
-
 const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgradeClick }: ChatSectionProps) => {
   const getWelcomeMessage = () => {
     if (user.role === 'admin') {
-      return 'Добро пожаловать, Администратор! У вас полный безлимитный доступ. Задавайте любые вопросы или улучшайте фотографии.';
+      return 'Добро пожаловать, Администратор! У вас полный безлимитный доступ. Задавайте любые вопросы!';
     }
     if (user.hasPro) {
-      return 'Добро пожаловать, PRO пользователь! У вас безлимитный доступ к AI. Задавайте вопросы и улучшайте фотографии без ограничений.';
+      return 'Добро пожаловать, PRO пользователь! У вас безлимитный доступ к AI. Задавайте вопросы без ограничений.';
     }
     if (user.role === 'user') {
       return 'Добро пожаловать! У вас есть 5 бесплатных запросов. Для безлимитного доступа получите PRO подписку в разделе "Подписка".';
     }
-    return 'Привет! Я AI-ассистент. Могу ответить на любые вопросы или улучшить качество ваших фотографий. У вас 5 бесплатных запросов!';
+    return 'Привет! Я AI-ассистент. Могу ответить на любые вопросы! У вас 5 бесплатных запросов.';
   };
 
   const [messages, setMessages] = useState<Message[]>([
@@ -52,9 +50,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -76,39 +72,35 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
   const simulateAIResponse = (userMessage: string): string => {
     const lowerMsg = userMessage.toLowerCase();
     
-    if (lowerMsg.includes('фото') || lowerMsg.includes('изображени') || lowerMsg.includes('картинк')) {
-      return 'Для улучшения фотографий используйте кнопку "Загрузить фото" ниже. Я повышу разрешение и качество с помощью AI-алгоритмов.';
-    }
-    
     if (lowerMsg.includes('привет') || lowerMsg.includes('здравствуй')) {
-      return 'Здравствуйте! Рад помочь. Задавайте любые вопросы или загружайте фото для улучшения качества.';
+      return 'Здравствуйте! Чем могу помочь?';
     }
     
-    if (lowerMsg.includes('подписк') || lowerMsg.includes('pro')) {
-      return 'PRO подписка даёт неограниченный доступ к AI. Для получения подписки перейдите в раздел "Подписка".';
+    if (lowerMsg.match(/\d+\s*[+]\s*\d+/)) {
+      try {
+        const result = eval(userMessage.replace(/[^0-9+\-*/().\s]/g, ''));
+        return `Ответ: ${result}`;
+      } catch {
+        return 'Не могу вычислить. Попробуйте другой формат.';
+      }
     }
     
     if (lowerMsg.includes('как дела') || lowerMsg.includes('что нового')) {
-      return 'У меня всё отлично, спасибо! Я готов помочь вам с любыми вопросами. Чем могу быть полезен?';
+      return 'Всё отлично, спасибо! Чем могу помочь?';
     }
     
     if (lowerMsg.includes('помощь') || lowerMsg.includes('что ты умеешь')) {
-      return 'Я могу:\n• Отвечать на ваши вопросы\n• Улучшать качество фотографий\n• Помогать с различными задачами\n• Давать советы и рекомендации\n\nЗадавайте любые вопросы!';
-    }
-    
-    if (lowerMsg.includes('погода')) {
-      return 'К сожалению, у меня нет доступа к актуальным данным о погоде. Рекомендую проверить прогноз на специализированных сайтах.';
+      return 'Я могу отвечать на вопросы и выполнять простые вычисления. Например, попробуйте: 2+2, 10*5, 100/4';
     }
     
     if (lowerMsg.includes('спасибо') || lowerMsg.includes('благодарю')) {
-      return 'Всегда пожалуйста! Рад был помочь. Если возникнут ещё вопросы — обращайтесь!';
+      return 'Пожалуйста! Обращайтесь!';
     }
     
     const responses = [
-      `Отличный вопрос! По теме "${userMessage}" могу сказать, что это интересная тема. Я проанализировал ваш запрос и готов помочь с дополнительной информацией.`,
-      `Понял ваш запрос про "${userMessage}". Это важный вопрос! Если нужна более детальная информация, задавайте уточняющие вопросы.`,
-      `Спасибо за вопрос! Касательно "${userMessage}" - я могу помочь вам разобраться в этом вопросе подробнее.`,
-      `Интересный запрос про "${userMessage}"! Я обработал информацию и готов предоставить вам полезные сведения по этой теме.`
+      `Понял ваш вопрос про "${userMessage}". Могу помочь с вычислениями или ответить на общие вопросы.`,
+      `Получил запрос: "${userMessage}". Для математических операций используйте формат: 2+2, для других вопросов уточните детали.`,
+      `"${userMessage}" - интересный вопрос! Уточните, что именно вас интересует?`
     ];
     
     return responses[Math.floor(Math.random() * responses.length)];
@@ -147,80 +139,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
     }, 1000);
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
 
-    if (!user.hasPro && user.role !== 'admin') {
-      toast.error('Улучшение фото доступно только для PRO пользователей');
-      onUpgradeClick();
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Файл слишком большой. Максимум 10 МБ');
-      return;
-    }
-
-    setIsEnhancing(true);
-    toast.info('Загружаем и улучшаем фото...');
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64Image = e.target?.result as string;
-
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        text: 'Улучшить это фото',
-        sender: 'user',
-        timestamp: new Date(),
-        imageUrl: base64Image
-      };
-      setMessages(prev => [...prev, userMessage]);
-      onSendMessage();
-
-      try {
-        const response = await fetch(ENHANCE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64Image })
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          const aiResponse: Message = {
-            id: (Date.now() + 1).toString(),
-            text: '✨ Готово! Ваше фото улучшено с помощью AI. Разрешение увеличено в 1.5 раза, улучшена резкость и цвета.',
-            sender: 'ai',
-            timestamp: new Date(),
-            imageUrl: data.enhanced_url
-          };
-          setMessages(prev => [...prev, aiResponse]);
-          toast.success('Фото успешно улучшено!');
-        } else {
-          throw new Error(data.error || 'Ошибка улучшения');
-        }
-      } catch (error) {
-        console.error('Enhancement error:', error);
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: 'Извините, произошла ошибка при улучшении фото. Проверьте формат изображения и попробуйте снова.',
-          sender: 'ai',
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, errorMessage]);
-        toast.error('Ошибка улучшения фото');
-      } finally {
-        setIsEnhancing(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      }
-    };
-
-    reader.readAsDataURL(file);
-  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -280,7 +199,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
             </div>
           ))}
           
-          {(isProcessing || isEnhancing) && (
+          {isProcessing && (
             <div className="flex justify-start animate-fade-in">
               <div className="bg-white shadow-md border border-gray-100 rounded-2xl px-4 py-3">
                 <div className="flex gap-2">
@@ -288,7 +207,6 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
                   <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-100"></div>
                   <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse delay-200"></div>
                 </div>
-                {isEnhancing && <p className="text-xs text-gray-500 mt-2">Улучшаем фото...</p>}
               </div>
             </div>
           )}
@@ -304,34 +222,16 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
               onKeyPress={handleKeyPress}
               placeholder="Напишите сообщение..."
               className="flex-1 rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-500"
-              disabled={isProcessing || isEnhancing}
+              disabled={isProcessing}
             />
             <Button
               onClick={handleSendMessage}
-              disabled={!canSendMessage || isProcessing || isEnhancing || !inputValue.trim()}
+              disabled={!canSendMessage || isProcessing || !inputValue.trim()}
               className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 px-6"
             >
               <Icon name="Send" size={20} />
             </Button>
           </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-          
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={!canSendMessage || isEnhancing}
-            variant="outline"
-            className="w-full rounded-xl border-2"
-          >
-            <Icon name="Image" className="mr-2" size={18} />
-            Загрузить фото для улучшения
-          </Button>
 
           {!canSendMessage && (
             <p className="text-sm text-red-500 mt-2 text-center">
