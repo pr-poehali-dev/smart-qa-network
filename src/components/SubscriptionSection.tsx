@@ -25,7 +25,6 @@ const SubscriptionSection = ({ user }: SubscriptionSectionProps) => {
     { icon: 'Zap', text: 'Приоритетная обработка' },
     { icon: 'Search', text: 'Поиск ответов в интернете' },
     { icon: 'Clock', text: 'Быстрые ответы без очереди' },
-    { icon: 'Shield', text: 'Приоритетная поддержка' },
     { icon: 'Sparkles', text: 'Доступ к новым функциям' }
   ];
 
