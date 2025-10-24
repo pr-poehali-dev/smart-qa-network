@@ -10,10 +10,12 @@ interface Message {
   text: string;
   sender: 'user' | 'ai';
   timestamp: Date;
+  imageUrl?: string;
 }
 
 interface ChatSectionProps {
   user: {
+    id?: number;
     role: 'guest' | 'user' | 'admin';
     hasPro: boolean;
     messagesUsed: number;
@@ -24,18 +26,22 @@ interface ChatSectionProps {
   onUpgradeClick: () => void;
 }
 
+const ENHANCE_URL = 'https://functions.poehali.dev/8699a9ae-e3fd-4ff0-a3df-c4c4cbd97c50';
+
 const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgradeClick }: ChatSectionProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Привет! Я AI-ассистент. Могу ответить на любые вопросы или улучшить качество ваших фотографий. Чем могу помочь?',
+      text: 'Привет! Я AI-ассистент. Могу ответить на любые вопросы или улучшить качество ваших фотографий. Загрузите фото ниже!',
       sender: 'ai',
       timestamp: new Date()
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -49,7 +55,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
     const lowerMsg = userMessage.toLowerCase();
     
     if (lowerMsg.includes('фото') || lowerMsg.includes('изображени') || lowerMsg.includes('картинк')) {
-      return 'Для улучшения фотографий загрузите изображение, и я повышу его разрешение и качество с помощью AI-алгоритмов. Максимальный размер файла: 10 МБ.';
+      return 'Для улучшения фотографий используйте кнопку "Загрузить фото" ниже. Я повышу разрешение и качество с помощью AI-алгоритмов.';
     }
     
     if (lowerMsg.includes('привет') || lowerMsg.includes('здравствуй')) {
@@ -57,7 +63,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
     }
     
     if (lowerMsg.includes('подписк') || lowerMsg.includes('pro')) {
-      return 'PRO подписка даёт неограниченный доступ к AI. Для получения подписки перейдите в раздел "Подписка" и свяжитесь с нами.';
+      return 'PRO подписка даёт неограниченный доступ к AI. Для получения подписки перейдите в раздел "Подписка".';
     }
     
     return `Спасибо за вопрос! Я обработал ваш запрос: "${userMessage}". В полной версии я смогу предоставить более детальный ответ и выполнить сложные задачи.`;
@@ -96,6 +102,80 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
     }, 1000);
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!canSendMessage) {
+      toast.error('Достигнут лимит. Оформите подписку для улучшения фото.');
+      onUpgradeClick();
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Файл слишком большой. Максимум 10 МБ');
+      return;
+    }
+
+    setIsEnhancing(true);
+    toast.info('Загружаем и улучшаем фото...');
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64Image = e.target?.result as string;
+
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        text: 'Улучшить это фото',
+        sender: 'user',
+        timestamp: new Date(),
+        imageUrl: base64Image
+      };
+      setMessages(prev => [...prev, userMessage]);
+      onSendMessage();
+
+      try {
+        const response = await fetch(ENHANCE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64Image })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          const aiResponse: Message = {
+            id: (Date.now() + 1).toString(),
+            text: 'Готово! Ваше фото улучшено с помощью AI',
+            sender: 'ai',
+            timestamp: new Date(),
+            imageUrl: data.enhanced_url
+          };
+          setMessages(prev => [...prev, aiResponse]);
+          toast.success('Фото успешно улучшено!');
+        } else {
+          throw new Error(data.error || 'Ошибка улучшения');
+        }
+      } catch (error) {
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: 'Извините, не удалось улучшить фото. Попробуйте позже.',
+          sender: 'ai',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        toast.error('Ошибка улучшения фото');
+      } finally {
+        setIsEnhancing(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -120,7 +200,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm font-medium">Осталось сообщений:</p>
+              <p className="text-sm font-medium">Осталось:</p>
               <p className="text-2xl font-bold">{remainingMessages}</p>
             </div>
           </div>
@@ -139,6 +219,13 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
                     : 'bg-white shadow-md border border-gray-100'
                 }`}
               >
+                {message.imageUrl && (
+                  <img 
+                    src={message.imageUrl} 
+                    alt="Image" 
+                    className="rounded-lg mb-2 max-w-full h-auto"
+                  />
+                )}
                 <p className="text-sm leading-relaxed">{message.text}</p>
                 <p className={`text-xs mt-1 ${message.sender === 'user' ? 'text-white/70' : 'text-gray-400'}`}>
                   {message.timestamp.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
@@ -147,7 +234,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
             </div>
           ))}
           
-          {isProcessing && (
+          {(isProcessing || isEnhancing) && (
             <div className="flex justify-start animate-fade-in">
               <div className="bg-white shadow-md border border-gray-100 rounded-2xl px-4 py-3">
                 <div className="flex gap-2">
@@ -155,6 +242,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
                   <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-100"></div>
                   <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse delay-200"></div>
                 </div>
+                {isEnhancing && <p className="text-xs text-gray-500 mt-2">Улучшаем фото...</p>}
               </div>
             </div>
           )}
@@ -163,46 +251,47 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
         </div>
 
         <div className="p-4 bg-white border-t">
-          <div className="flex gap-3">
+          <div className="flex gap-3 mb-3">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Напишите сообщение..."
               className="flex-1 rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-500"
-              disabled={isProcessing}
+              disabled={isProcessing || isEnhancing}
             />
             <Button
               onClick={handleSendMessage}
-              disabled={!canSendMessage || isProcessing || !inputValue.trim()}
+              disabled={!canSendMessage || isProcessing || isEnhancing || !inputValue.trim()}
               className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 px-6"
             >
               <Icon name="Send" size={20} />
             </Button>
           </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!canSendMessage || isEnhancing}
+            variant="outline"
+            className="w-full rounded-xl border-2"
+          >
+            <Icon name="Image" className="mr-2" size={18} />
+            Загрузить фото для улучшения
+          </Button>
+
           {!canSendMessage && (
             <p className="text-sm text-red-500 mt-2 text-center">
               Лимит исчерпан. <button onClick={onUpgradeClick} className="underline font-medium">Оформите подписку</button>
             </p>
           )}
-        </div>
-      </Card>
-
-      <Card className="mt-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-            <Icon name="Image" className="text-white" size={24} />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-lg mb-2">Улучшение фотографий</h3>
-            <p className="text-gray-600 mb-4">
-              Загрузите изображение, и AI повысит его качество и разрешение автоматически
-            </p>
-            <Button className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600">
-              <Icon name="Upload" className="mr-2" size={18} />
-              Загрузить фото
-            </Button>
-          </div>
         </div>
       </Card>
     </div>

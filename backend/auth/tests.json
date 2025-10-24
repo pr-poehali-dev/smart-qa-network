@@ -1,0 +1,39 @@
+{
+  "tests": [
+    {
+      "name": "Register new user",
+      "method": "POST",
+      "body": {
+        "action": "register",
+        "email": "test@example.com",
+        "password": "test123"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "user": {
+          "email": "string",
+          "role": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login user",
+      "method": "POST",
+      "body": {
+        "action": "login",
+        "email": "admin@ai-platform.com",
+        "password": "R.ofical.1"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "user": {
+          "role": "admin"
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

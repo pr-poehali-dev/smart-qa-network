@@ -7,6 +7,8 @@ import Icon from '@/components/ui/icon';
 type UserRole = 'guest' | 'user' | 'admin';
 
 interface User {
+  id?: number;
+  email?: string;
   role: UserRole;
   hasPro: boolean;
   messagesUsed: number;
