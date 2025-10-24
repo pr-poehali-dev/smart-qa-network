@@ -1,13 +1,14 @@
 import json
 import base64
-import requests
+import io
+from PIL import Image, ImageEnhance, ImageFilter
 from typing import Dict, Any
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
-    Business: AI image enhancement using Real-ESRGAN upscaling
+    Business: AI image enhancement using PIL
     Args: event with POST method, body with base64 image
-    Returns: Enhanced image URL
+    Returns: Enhanced image as base64
     '''
     method: str = event.get('httpMethod', 'GET')
     
@@ -44,64 +45,38 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if ',' in image_data:
             image_data = image_data.split(',')[1]
         
-        response = requests.post(
-            'https://api.replicate.com/v1/predictions',
-            headers={
-                'Authorization': 'Bearer r8_6YX7qZ9pK4mN2vL3wH8jT5sR1uP0fY6cB3dA9',
-                'Content-Type': 'application/json'
-            },
-            json={
-                'version': 'f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa',
-                'input': {
-                    'image': f'data:image/png;base64,{image_data}',
-                    'scale': 2,
-                    'face_enhance': True
-                }
-            },
-            timeout=30
-        )
+        img_bytes = base64.b64decode(image_data)
+        img = Image.open(io.BytesIO(img_bytes))
         
-        if response.status_code != 201:
-            return {
-                'statusCode': 500,
-                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'error': 'Image enhancement service unavailable'})
-            }
+        width, height = img.size
+        new_size = (int(width * 1.5), int(height * 1.5))
+        img = img.resize(new_size, Image.Resampling.LANCZOS)
         
-        result = response.json()
-        prediction_url = result.get('urls', {}).get('get')
+        enhancer = ImageEnhance.Sharpness(img)
+        img = enhancer.enhance(1.5)
         
-        import time
-        for _ in range(30):
-            time.sleep(2)
-            status_response = requests.get(
-                prediction_url,
-                headers={'Authorization': 'Bearer r8_6YX7qZ9pK4mN2vL3wH8jT5sR1uP0fY6cB3dA9'}
-            )
-            status_data = status_response.json()
-            
-            if status_data.get('status') == 'succeeded':
-                output_url = status_data.get('output')
-                return {
-                    'statusCode': 200,
-                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({
-                        'success': True,
-                        'enhanced_url': output_url
-                    })
-                }
-            
-            elif status_data.get('status') in ['failed', 'canceled']:
-                return {
-                    'statusCode': 500,
-                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({'error': 'Enhancement failed'})
-                }
+        enhancer = ImageEnhance.Contrast(img)
+        img = enhancer.enhance(1.2)
+        
+        enhancer = ImageEnhance.Color(img)
+        img = enhancer.enhance(1.1)
+        
+        img = img.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
+        
+        output_buffer = io.BytesIO()
+        img.save(output_buffer, format='PNG', quality=95)
+        output_buffer.seek(0)
+        
+        enhanced_base64 = base64.b64encode(output_buffer.read()).decode('utf-8')
+        enhanced_data_url = f'data:image/png;base64,{enhanced_base64}'
         
         return {
-            'statusCode': 504,
+            'statusCode': 200,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Enhancement timeout'})
+            'body': json.dumps({
+                'success': True,
+                'enhanced_url': enhanced_data_url
+            })
         }
         
     except Exception as e:
