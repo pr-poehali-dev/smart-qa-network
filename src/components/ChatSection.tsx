@@ -64,6 +64,15 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    setMessages([{
+      id: '1',
+      text: getWelcomeMessage(),
+      sender: 'ai',
+      timestamp: new Date()
+    }]);
+  }, [user.role, user.hasPro]);
+
   const simulateAIResponse = (userMessage: string): string => {
     const lowerMsg = userMessage.toLowerCase();
     
@@ -142,8 +151,8 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!canSendMessage) {
-      toast.error('Достигнут лимит. Оформите подписку для улучшения фото.');
+    if (!user.hasPro && user.role !== 'admin') {
+      toast.error('Улучшение фото доступно только для PRO пользователей');
       onUpgradeClick();
       return;
     }
@@ -182,7 +191,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
         if (response.ok && data.success) {
           const aiResponse: Message = {
             id: (Date.now() + 1).toString(),
-            text: 'Готово! Ваше фото улучшено с помощью AI',
+            text: '✨ Готово! Ваше фото улучшено с помощью AI. Разрешение увеличено в 1.5 раза, улучшена резкость и цвета.',
             sender: 'ai',
             timestamp: new Date(),
             imageUrl: data.enhanced_url
@@ -193,9 +202,10 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
           throw new Error(data.error || 'Ошибка улучшения');
         }
       } catch (error) {
+        console.error('Enhancement error:', error);
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
-          text: 'Извините, не удалось улучшить фото. Попробуйте позже.',
+          text: 'Извините, произошла ошибка при улучшении фото. Проверьте формат изображения и попробуйте снова.',
           sender: 'ai',
           timestamp: new Date()
         };

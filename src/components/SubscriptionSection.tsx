@@ -16,7 +16,8 @@ interface SubscriptionSectionProps {
 
 const SubscriptionSection = ({ user }: SubscriptionSectionProps) => {
   const handleContactForPayment = () => {
-    toast.success('Скоро с вами свяжется наш менеджер для оформления подписки!');
+    window.open('https://t.me/skzry', '_blank');
+    toast.success('Открываем Telegram для связи!');
   };
 
   const features = [
