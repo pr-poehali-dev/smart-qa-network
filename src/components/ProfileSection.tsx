@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,13 +19,42 @@ interface ProfileSectionProps {
 }
 
 const ProfileSection = ({ user, setUser }: ProfileSectionProps) => {
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+
+  const ADMIN_CREDENTIALS = {
+    username: 'skzry',
+    password: 'R.ofical.1'
+  };
+
   const handleLogin = (role: 'user' | 'admin') => {
+    if (role === 'admin') {
+      setShowAdminLogin(true);
+      return;
+    }
     setUser({
       role,
       hasPro: false,
       messagesUsed: 0
     });
-    toast.success(`Вы вошли как ${role === 'admin' ? 'Администратор' : 'Пользователь'}`);
+    toast.success('Вы вошли как Пользователь');
+  };
+
+  const handleAdminLogin = () => {
+    if (adminUsername === ADMIN_CREDENTIALS.username && adminPassword === ADMIN_CREDENTIALS.password) {
+      setUser({
+        role: 'admin',
+        hasPro: false,
+        messagesUsed: 0
+      });
+      toast.success('Вы вошли как Администратор');
+      setShowAdminLogin(false);
+      setAdminUsername('');
+      setAdminPassword('');
+    } else {
+      toast.error('Неверный логин или пароль');
+    }
   };
 
   const handleLogout = () => {
@@ -110,7 +140,7 @@ const ProfileSection = ({ user, setUser }: ProfileSectionProps) => {
           </div>
         </div>
 
-        {user.role === 'guest' && (
+        {user.role === 'guest' && !showAdminLogin && (
           <div className="space-y-3">
             <p className="text-center text-gray-600 mb-4">Войдите для доступа ко всем функциям</p>
             <Button
@@ -127,6 +157,54 @@ const ProfileSection = ({ user, setUser }: ProfileSectionProps) => {
               <Icon name="Shield" className="mr-2" size={18} />
               Войти как Администратор
             </Button>
+          </div>
+        )}
+
+        {user.role === 'guest' && showAdminLogin && (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="admin-username" className="mb-2 block">Логин администратора</Label>
+              <Input
+                id="admin-username"
+                type="text"
+                value={adminUsername}
+                onChange={(e) => setAdminUsername(e.target.value)}
+                placeholder="Введите логин"
+                className="rounded-xl"
+              />
+            </div>
+            <div>
+              <Label htmlFor="admin-password" className="mb-2 block">Пароль</Label>
+              <Input
+                id="admin-password"
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Введите пароль"
+                className="rounded-xl"
+                onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={handleAdminLogin}
+                className="flex-1 rounded-xl bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700"
+              >
+                <Icon name="Shield" className="mr-2" size={18} />
+                Войти
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowAdminLogin(false);
+                  setAdminUsername('');
+                  setAdminPassword('');
+                }}
+                variant="outline"
+                className="flex-1 rounded-xl"
+              >
+                Отмена
+              </Button>
+            </div>
           </div>
         )}
 
