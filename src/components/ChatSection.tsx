@@ -52,6 +52,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showTranslator, setShowTranslator] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -107,7 +108,12 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
       return;
     }
 
-    const userQuery = inputValue;
+    // В режиме переводчика автоматически добавляем префикс
+    let userQuery = inputValue;
+    if (showTranslator && !userQuery.toLowerCase().includes('перевед')) {
+      userQuery = `Переведи: ${userQuery}`;
+      setShowTranslator(false); // Выключаем режим после отправки
+    }
     const userMessage: Message = {
       id: Date.now().toString(),
       text: userQuery,
@@ -254,12 +260,20 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
         </div>
 
         <div className="p-4 bg-white border-t">
-          <div className="flex gap-3 mb-3">
+          <div className="flex gap-2 mb-3">
+            <Button
+              onClick={() => setShowTranslator(!showTranslator)}
+              variant="outline"
+              className="rounded-xl"
+              title="Быстрый переводчик"
+            >
+              <Icon name="Languages" size={20} />
+            </Button>
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Напишите сообщение..."
+              placeholder={showTranslator ? "Введите текст для перевода..." : "Напишите сообщение..."}
               className="flex-1 rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-500"
               disabled={isProcessing}
             />
@@ -268,9 +282,60 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
               disabled={!canSendMessage || isProcessing || !inputValue.trim()}
               className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 px-6"
             >
-              <Icon name="Send" size={20} />
+              <Icon name={showTranslator ? "Languages" : "Send"} size={20} />
             </Button>
           </div>
+
+          {showTranslator && (
+            <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 mb-2 text-sm text-blue-700">
+                <Icon name="Info" size={16} />
+                <span>Режим переводчика: автоопределение языка</span>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  onClick={() => setInputValue(inputValue ? `${inputValue} на английский` : 'на английский')}
+                >
+                  🇬🇧 → EN
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  onClick={() => setInputValue(inputValue ? `${inputValue} на русский` : 'на русский')}
+                >
+                  🇷🇺 → RU
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  onClick={() => setInputValue(inputValue ? `${inputValue} на испанский` : 'на испанский')}
+                >
+                  🇪🇸 → ES
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  onClick={() => setInputValue(inputValue ? `${inputValue} на французский` : 'на французский')}
+                >
+                  🇫🇷 → FR
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  onClick={() => setInputValue(inputValue ? `${inputValue} на немецкий` : 'на немецкий')}
+                >
+                  🇩🇪 → DE
+                </Button>
+              </div>
+            </div>
+          )}
 
           {!canSendMessage && (
             <p className="text-sm text-red-500 mt-2 text-center">
