@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "Search query test",
+      "method": "POST",
+      "body": {
+        "query": "что такое фотосинтез"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "answer": "string",
+        "query": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Empty query test",
+      "method": "POST",
+      "body": {
+        "query": ""
+      },
+      "expectedStatus": 400
+    }
+  ]
+}

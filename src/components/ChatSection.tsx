@@ -26,6 +26,8 @@ interface ChatSectionProps {
   onUpgradeClick: () => void;
 }
 
+const AI_SEARCH_URL = 'https://functions.poehali.dev/99560980-ab21-4c21-a5f0-1f3fec744ec7';
+
 const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgradeClick }: ChatSectionProps) => {
   const getWelcomeMessage = () => {
     if (user.role === 'admin') {
@@ -69,12 +71,12 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
     }]);
   }, [user.role, user.hasPro]);
 
-  const simulateAIResponse = (userMessage: string): string => {
+  const getQuickResponse = (userMessage: string): string | null => {
     const lowerMsg = userMessage.toLowerCase();
     
     // Приветствия
     if (lowerMsg.includes('привет') || lowerMsg.includes('здравствуй')) {
-      return 'Здравствуйте! Я готов помочь с любыми вопросами: написать доклад, объяснить теорию, решить задачу или дать определение. Что вас интересует?';
+      return 'Здравствуйте! Задавайте любые вопросы - я найду ответы в интернете!';
     }
     
     // Математические вычисления
@@ -141,20 +143,13 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
     
     // Благодарности
     if (lowerMsg.includes('спасибо') || lowerMsg.includes('благодарю')) {
-      return 'Пожалуйста! Рад был помочь. Если есть ещё вопросы - обращайтесь!';
+      return 'Пожалуйста! Рад был помочь!';
     }
     
-    // Общие ответы с подсказками
-    const generalResponses = [
-      `По теме "${userMessage}" могу помочь! Уточните, что нужно:\n• Написать доклад/текст\n• Объяснить теорию\n• Дать определение\n• Решить задачу`,
-      `Интересный запрос про "${userMessage}"! Я могу:\n• Объяснить подробнее\n• Дать примеры\n• Решить связанные задачи\n\nЧто конкретно вас интересует?`,
-      `Понял ваш вопрос: "${userMessage}". Для лучшего ответа уточните:\n• Нужно определение?\n• Объяснение теории?\n• Решение задачи?\n• Написание текста?`
-    ];
-    
-    return generalResponses[Math.floor(Math.random() * generalResponses.length)];
+    return null;
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
     if (!canSendMessage) {
@@ -163,9 +158,10 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
       return;
     }
 
+    const userQuery = inputValue;
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: inputValue,
+      text: userQuery,
       sender: 'user',
       timestamp: new Date()
     };
@@ -175,16 +171,62 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
     setIsProcessing(true);
     onSendMessage();
 
-    setTimeout(() => {
+    // Проверяем быстрые ответы
+    const quickResponse = getQuickResponse(userQuery);
+    
+    if (quickResponse) {
+      setTimeout(() => {
+        const aiResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: quickResponse,
+          sender: 'ai',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, aiResponse]);
+        setIsProcessing(false);
+      }, 500);
+      return;
+    }
+
+    // Ищем в интернете
+    try {
+      const response = await fetch(AI_SEARCH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: userQuery })
+      });
+
+      const data = await response.json();
+
+      let answerText = '';
+      if (data.answer) {
+        answerText = data.answer;
+        if (data.source) {
+          answerText += `\n\n📚 Источник: ${data.source}`;
+        }
+      } else {
+        answerText = 'К сожалению, не удалось найти точную информацию. Попробуйте переформулировать вопрос.';
+      }
+
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: simulateAIResponse(inputValue),
+        text: answerText,
         sender: 'ai',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Search error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: 'Произошла ошибка при поиске. Проверьте подключение к интернету.',
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsProcessing(false);
-    }, 1000);
+    }
   };
 
 

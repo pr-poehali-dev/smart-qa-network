@@ -23,7 +23,7 @@ const SubscriptionSection = ({ user }: SubscriptionSectionProps) => {
   const features = [
     { icon: 'Infinity', text: 'Безлимитные запросы к AI' },
     { icon: 'Zap', text: 'Приоритетная обработка' },
-    { icon: 'Image', text: 'Неограниченное улучшение фото' },
+    { icon: 'Search', text: 'Поиск ответов в интернете' },
     { icon: 'Clock', text: 'Быстрые ответы без очереди' },
     { icon: 'Shield', text: 'Приоритетная поддержка' },
     { icon: 'Sparkles', text: 'Доступ к новым функциям' }
@@ -100,7 +100,7 @@ const SubscriptionSection = ({ user }: SubscriptionSectionProps) => {
             </div>
             <div className="flex items-center gap-3">
               <Icon name="X" className="text-red-400" size={20} />
-              <span className="text-gray-400">Улучшение фото</span>
+              <span className="text-gray-400">Поиск в интернете</span>
             </div>
             <div className="flex items-center gap-3">
               <Icon name="X" className="text-red-400" size={20} />
