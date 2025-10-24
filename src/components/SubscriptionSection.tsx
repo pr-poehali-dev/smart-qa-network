@@ -78,41 +78,7 @@ const SubscriptionSection = ({ user }: SubscriptionSectionProps) => {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8 mb-8">
-        <Card className="p-8 bg-white shadow-lg rounded-2xl border-2">
-          <div className="mb-6">
-            <Badge variant="outline" className="mb-4">Бесплатный</Badge>
-            <h3 className="text-2xl font-bold mb-2">Базовый</h3>
-            <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-4xl font-bold">0 ₽</span>
-              <span className="text-gray-500">навсегда</span>
-            </div>
-          </div>
-
-          <div className="space-y-3 mb-8">
-            <div className="flex items-center gap-3">
-              <Icon name="Check" className="text-green-500" size={20} />
-              <span>5 бесплатных запросов</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Icon name="Check" className="text-green-500" size={20} />
-              <span>Базовые функции AI</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Icon name="X" className="text-red-400" size={20} />
-              <span className="text-gray-400">Поиск в интернете</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Icon name="X" className="text-red-400" size={20} />
-              <span className="text-gray-400">Приоритетная обработка</span>
-            </div>
-          </div>
-
-          <Button variant="outline" className="w-full rounded-xl" disabled>
-            Текущий план
-          </Button>
-        </Card>
-
+      <div className="max-w-md mx-auto mb-8">
         <Card className="p-8 bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-2xl rounded-2xl border-4 border-purple-300 relative overflow-hidden">
           <div className="absolute top-4 right-4">
             <Badge className="bg-yellow-500 text-black">Популярный</Badge>
