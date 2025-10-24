@@ -1,15 +1,28 @@
 {
   "tests": [
     {
-      "name": "Search query test",
+      "name": "Translation test",
       "method": "POST",
       "body": {
-        "query": "что такое фотосинтез"
+        "query": "переведи hello"
       },
       "expectedStatus": 200,
       "expectedBody": {
         "answer": "string",
-        "query": "string"
+        "source": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Math test",
+      "method": "POST",
+      "body": {
+        "query": "2 + 2"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "answer": "string",
+        "source": "string"
       },
       "bodyMatcher": "partial"
     },
