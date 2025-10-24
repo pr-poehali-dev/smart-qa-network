@@ -39,7 +39,7 @@ const ChatSection = ({ user, canSendMessage, onSendMessage, messageLimit, onUpgr
     if (user.role === 'user') {
       return 'Добро пожаловать! (5 запросов)\n\nПросто спросите:\n• "Напиши доклад о..."\n• "Переведи текст..."\n• "Объясни..."\n• Любой вопрос';
     }
-    return 'Привет! (5 запросов бесплатно)\n\nЗадавайте:\n✓ Доклады\n✓ Переводы\n✓ Объяснения\n✓ Вопросы';
+    return 'Привет! Задай мне любой вопрос, постараюсь ответить!';
   };
 
   const [messages, setMessages] = useState<Message[]>([
